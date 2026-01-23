@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
+import PdfArticleViewer from "../../components/PdfArticleViewer";
 import { api } from "../../services/api";
 
 export default function SessionMaterialPage() {
@@ -106,17 +107,87 @@ export default function SessionMaterialPage() {
       <Breadcrumb items={breadcrumbItems} />
 
       <div className="content-area">
+        <h2 className="page-title mb-3">{session?.title}</h2>
+
+        {/* Tabs Navigation - Matching Second Image */}
+        <ul className="nav nav-tabs mb-4" role="tablist">
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/video`}
+            >
+              <span>🎥</span>
+              <span>Videos</span>
+              {session?.videos?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.videos.length}</span>
+              )}
+            </Link>
+          </li>
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/ppt/0`}
+            >
+              <span>📊</span>
+              <span>PPTs</span>
+              {session?.ppts?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.ppts.length}</span>
+              )}
+            </Link>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link active d-flex align-items-center gap-2`}
+              type="button"
+            >
+              <span>📄</span>
+              <span>Study Materials</span>
+              {materials.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{materials.length}</span>
+              )}
+            </button>
+          </li>
+        </ul>
+
+        {/* Materials List - Card Layout */}
+        {/* <div className="row g-3 mb-4">
+          {materials.map((material, idx) => (
+            <div key={idx} className="col-12">
+              <div className={`card ${idx === currentMaterialIndex ? "border-primary" : ""}`}>
+                <div className="card-body">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="card-title mb-1">
+                        {material.title || `Material ${idx + 1}`}
+                      </h5>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button
+                        className={`btn ${idx === currentMaterialIndex ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => setCurrentMaterialIndex(idx)}
+                      >
+                        {idx === currentMaterialIndex ? "▶ Viewing" : `View PDF ${idx + 1}`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div> */}
+
+        {/* PDF Viewer Section */}
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-          <h2 className="page-title mb-0">
-            {currentMaterial?.title || `Study Material ${currentMaterialIndex + 1}`} ({currentMaterialIndex + 1} of {materials.length})
-          </h2>
+          <h4 className="mb-0">
+            Material {currentMaterialIndex + 1} of {materials.length}
+          </h4>
           <div className="d-flex gap-2">
             <Link className="btn btn-outline-primary" to={`/learn/${sessionId}`}>
               Back
             </Link>
             {pdfUrl && (
-              <a className="btn btn-primary" href={pdfUrl} target="_blank" rel="noreferrer">
-                Open in new tab
+              <a className="btn btn-outline-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
+                Open PDF in new tab
               </a>
             )}
           </div>
@@ -171,20 +242,21 @@ export default function SessionMaterialPage() {
           </div>
         )}
 
-        {/* PDF Viewer */}
+        {/* PDF Article Viewer - Renders PDF as article-style content */}
         <div className="mt-3">
           {pdfUrl ? (
-            <iframe
-              title="PDF Viewer"
-              src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+            <div
               style={{
-                width: "100%",
-                height: "75vh",
-                border: "0",
+                background: "#f8f9fa",
                 borderRadius: "12px",
-                background: "#fff",
+                padding: "1rem",
+                minHeight: "400px",
+                overflowY: "auto",
+                maxHeight: "80vh",
               }}
-            />
+            >
+              <PdfArticleViewer pdfUrl={pdfUrl} />
+            </div>
           ) : (
             <div className="alert alert-info mb-0">No PDF URL available.</div>
           )}

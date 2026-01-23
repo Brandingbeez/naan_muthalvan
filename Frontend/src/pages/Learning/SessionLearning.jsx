@@ -94,126 +94,68 @@ export default function SessionLearningPage() {
       
       <div className="content-area">
         <h2 className="page-title">{session?.title}</h2>
-        {session?.description && (
-          <p className="text-muted mb-4">{session.description}</p>
-        )}
-
-        {/* Tabs Navigation */}
-        <ul className="nav nav-tabs mb-4" role="tablist">
-          <li className="nav-item" role="presentation">
+        
+        {/* Three Cards Layout - Matching First Image */}
+        <div className="file-grid">
+          {/* Session Study Material Card */}
+          <div className="file-card">
+            <div className="file-icon">📄</div>
+            <h3>Session Study Material</h3>
+            <p>Download or view the study material for this session</p>
             <button
-              className={`nav-link ${activeTab === "videos" ? "active" : ""}`}
-              onClick={() => setActiveTab("videos")}
-              type="button"
+              className="file-button"
+              onClick={() => {
+                if (materials.length > 0) {
+                  navigate(`/learn/${sessionId}/material/0`);
+                } else {
+                  alert("No study materials available for this session.");
+                }
+              }}
+              disabled={materials.length === 0}
             >
-              🎥 Videos {videos.length > 0 && <span className="badge bg-secondary">{videos.length}</span>}
+              Open Material
             </button>
-          </li>
-          <li className="nav-item" role="presentation">
+          </div>
+
+          {/* Classroom PPT Card */}
+          <div className="file-card">
+            <div className="file-icon">📊</div>
+            <h3>Classroom PPT</h3>
+            <p>Access the PowerPoint presentation used in class</p>
             <button
-              className={`nav-link ${activeTab === "ppts" ? "active" : ""}`}
-              onClick={() => setActiveTab("ppts")}
-              type="button"
+              className="file-button"
+              onClick={() => {
+                if (ppts.length > 0) {
+                  navigate(`/learn/${sessionId}/ppt/0`);
+                } else {
+                  alert("No PPTs available for this session.");
+                }
+              }}
+              disabled={ppts.length === 0}
             >
-              📊 PPTs {ppts.length > 0 && <span className="badge bg-secondary">{ppts.length}</span>}
+              Open PPT
             </button>
-          </li>
-          <li className="nav-item" role="presentation">
+          </div>
+
+          {/* YouTube Link / Videos Card */}
+          <div className="file-card">
+            <div className="file-icon">🎥</div>
+            <h3>YouTube Link</h3>
+            <p>Watch the video lecture for this session</p>
             <button
-              className={`nav-link ${activeTab === "materials" ? "active" : ""}`}
-              onClick={() => setActiveTab("materials")}
-              type="button"
+              className="file-button"
+              onClick={() => {
+                if (videos.length > 0) {
+                  navigate(`/learn/${sessionId}/video`);
+                } else {
+                  alert("No videos available for this session.");
+                }
+              }}
+              disabled={videos.length === 0}
             >
-              📄 Study Materials {materials.length > 0 && <span className="badge bg-secondary">{materials.length}</span>}
+              Watch Video
             </button>
-          </li>
-        </ul>
-
-        {/* Tab Content */}
-        <div className="tab-content">
-          {/* Videos Tab */}
-          {activeTab === "videos" && (
-            <div>
-              {videos.length > 0 ? (
-                <div className="row g-3">
-                  {videos.map((video, idx) => (
-                    <div key={idx} className="col-12 col-md-6 col-lg-4">
-                      <div className="card h-100">
-                        <div className="card-body">
-                          <h5 className="card-title">{video.title || `Video ${idx + 1}`}</h5>
-                          {video.duration && (
-                            <p className="text-muted small mb-2">Duration: {video.duration}</p>
-                          )}
-                          <button
-                            className="btn btn-primary w-100"
-                            onClick={() => navigate(`/learn/${sessionId}/video`)}
-                          >
-                            Watch Video {idx + 1}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="alert alert-info">No videos available for this session.</div>
-              )}
-            </div>
-          )}
-
-          {/* PPTs Tab */}
-          {activeTab === "ppts" && (
-            <div>
-              {ppts.length > 0 ? (
-                <div className="row g-3">
-                  {ppts.map((ppt, idx) => (
-                    <div key={idx} className="col-12 col-md-6 col-lg-4">
-                      <div className="card h-100">
-                        <div className="card-body">
-                          <h5 className="card-title">{ppt.title || `PPT ${idx + 1}`}</h5>
-                          <button
-                            className="btn btn-primary w-100"
-                            onClick={() => navigate(`/learn/${sessionId}/ppt/${idx}`)}
-                          >
-                            Open PPT {idx + 1}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="alert alert-info">No PPTs available for this session.</div>
-              )}
-            </div>
-          )}
-
-          {/* Materials Tab */}
-          {activeTab === "materials" && (
-            <div>
-              {materials.length > 0 ? (
-                <div className="row g-3">
-                  {materials.map((material, idx) => (
-                    <div key={idx} className="col-12 col-md-6 col-lg-4">
-                      <div className="card h-100">
-                        <div className="card-body">
-                          <h5 className="card-title">{material.title || `Material ${idx + 1}`}</h5>
-                          <button
-                            className="btn btn-primary w-100"
-                            onClick={() => navigate(`/learn/${sessionId}/material/${idx}`)}
-                          >
-                            View PDF {idx + 1}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="alert alert-info">No study materials available for this session.</div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

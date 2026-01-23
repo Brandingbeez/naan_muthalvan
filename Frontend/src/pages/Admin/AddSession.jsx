@@ -11,6 +11,7 @@ import {
   uploadPdf,
   uploadPpt,
 } from "../../services/uploadService";
+// Note: uploadMultipleToCloudinary actually uses GCS (name kept for backward compatibility)
 
 export default function AddSessionPage() {
   const [courses, setCourses] = useState([]);
@@ -432,12 +433,12 @@ export default function AddSessionPage() {
               <input
                 type="file"
                 className="form-control"
-                accept=".ppt,.pptx"
+                accept=".ppt,.pptx,.pdf"
                 multiple
                 onChange={handlePptFilesChange}
                 disabled={uploading}
               />
-              <div className="form-text">Select multiple PPT/PPTX files.</div>
+              <div className="form-text">Select multiple PPT/PPTX or PDF files.</div>
             </div>
 
             {pptFiles.length > 0 && (
@@ -497,7 +498,9 @@ export default function AddSessionPage() {
                 onChange={handleMaterialFilesChange}
                 disabled={uploading}
               />
-              <div className="form-text">Select multiple PDF files.</div>
+              <div className="form-text">
+                Select multiple PDF files. Files will be uploaded to Google Cloud Storage and stored in MongoDB.
+              </div>
             </div>
 
             {materialFiles.length > 0 && (

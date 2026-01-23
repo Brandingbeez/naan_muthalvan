@@ -2,10 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
+import PdfArticleViewer from "../../components/PdfArticleViewer";
 import { api } from "../../services/api";
 
 function isHttpUrl(url) {
   return /^https?:\/\//i.test(url || "");
+}
+
+function isPdfFile(url) {
+  if (!url) return false;
+  // Check if URL ends with .pdf (case insensitive)
+  // Also check the file extension in the path
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.endsWith('.pdf') || /\.pdf(\?|#|$)/i.test(url);
 }
 
 export default function SessionPptPage() {
@@ -49,9 +58,13 @@ export default function SessionPptPage() {
   const currentPpt = ppts[currentPptIndex];
   const pptUrl = currentPpt?.pptUrl || "";
 
+  // Check if current file is a PDF
+  const isCurrentPdf = isPdfFile(pptUrl);
+
   // Best "slide viewer" with minimal code: Office online embed (requires a public http(s) URL)
+  // Only generate Office embed URL for non-PDF files (PPT/PPTX)
   const officeEmbedUrl = useMemo(() => {
-    if (!pptUrl || !isHttpUrl(pptUrl)) return "";
+    if (!pptUrl || !isHttpUrl(pptUrl) || isPdfFile(pptUrl)) return "";
     return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(pptUrl)}`;
   }, [pptUrl]);
 
@@ -102,17 +115,104 @@ export default function SessionPptPage() {
     breadcrumbItems.push({ label: course.title, path: `/courses/${course._id}` });
   }
   breadcrumbItems.push({ label: session?.title || "Session", path: `/learn/${sessionId}` });
-  breadcrumbItems.push({ label: `PPT ${currentPptIndex + 1} of ${ppts.length}`, path: "" });
+  const currentPptUrl = ppts[currentPptIndex]?.pptUrl || "";
+  breadcrumbItems.push({ 
+    label: `${isPdfFile(currentPptUrl) ? "PDF" : "PPT"} ${currentPptIndex + 1} of ${ppts.length}`, 
+    path: "" 
+  });
 
   return (
     <div className="container app-shell">
       <Breadcrumb items={breadcrumbItems} />
 
       <div className="content-area">
+        <h2 className="page-title mb-3">{session?.title}</h2>
+
+        {/* Tabs Navigation - Matching Second Image */}
+        <ul className="nav nav-tabs mb-4" role="tablist">
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/video`}
+            >
+              <span>🎥</span>
+              <span>Videos</span>
+              {session?.videos?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.videos.length}</span>
+              )}
+            </Link>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link active d-flex align-items-center gap-2`}
+              type="button"
+            >
+              <span>📊</span>
+              <span>PPTs</span>
+              {ppts.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{ppts.length}</span>
+              )}
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/material/0`}
+            >
+              <span>📄</span>
+              <span>Study Materials</span>
+              {session?.materials?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.materials.length}</span>
+              )}
+            </Link>
+          </li>
+        </ul>
+
+        {/* PPTs List - Card Layout */}
+        {/* <div className="row g-3 mb-4">
+          {ppts.map((ppt, idx) => (
+            <div key={idx} className="col-12">
+              <div className={`card ${idx === currentPptIndex ? "border-primary" : ""}`}>
+                <div className="card-body">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="card-title mb-1">
+                        {ppt.title || `PPT ${idx + 1}`}
+                      </h5>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button
+                        className={`btn ${idx === currentPptIndex ? "btn-primary" : "btn-outline-primary"}`}
+                        onClick={() => {
+                          setCurrentPptIndex(idx);
+                          navigate(`/learn/${sessionId}/ppt/${idx}`, { replace: true });
+                        }}
+                      >
+                        {idx === currentPptIndex ? "▶ Viewing" : `Open PPT ${idx + 1}`}
+                      </button>
+                      {ppt.pptUrl && (
+                        <a
+                          className="btn btn-outline-secondary"
+                          href={ppt.pptUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Download
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div> */}
+
+        {/* PPT Viewer Section */}
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-          <h2 className="page-title mb-0">
-            {currentPpt?.title || `PPT ${currentPptIndex + 1}`} ({currentPptIndex + 1} of {ppts.length})
-          </h2>
+          <h4 className="mb-0">
+            {isPdfFile(pptUrl) ? "PDF" : "PPT"} {currentPptIndex + 1} of {ppts.length}
+          </h4>
           <div className="d-flex gap-2">
             <Link className="btn btn-outline-primary" to={`/learn/${sessionId}`}>
               Back
@@ -133,17 +233,17 @@ export default function SessionPptPage() {
               onClick={handlePrevPpt}
               disabled={currentPptIndex === 0}
             >
-              ← Previous PPT
+              ← Previous {isPdfFile(pptUrl) ? "PDF" : "PPT"}
             </button>
             <span className="text-muted">
-              PPT {currentPptIndex + 1} of {ppts.length}
+              {isPdfFile(pptUrl) ? "PDF" : "PPT"} {currentPptIndex + 1} of {ppts.length}
             </span>
             <button
               className="btn btn-outline-primary"
               onClick={handleNextPpt}
               disabled={currentPptIndex === ppts.length - 1}
             >
-              Next PPT →
+              Next {isPdfFile(pptUrl) ? "PDF" : "PPT"} →
             </button>
           </div>
         )}
@@ -153,7 +253,7 @@ export default function SessionPptPage() {
           <div className="mb-3">
             <div className="card">
               <div className="card-header bg-secondary text-white">
-                <h6 className="mb-0">All PPTs ({ppts.length})</h6>
+                <h6 className="mb-0">All PPTs/PDFs ({ppts.length})</h6>
               </div>
               <div className="list-group list-group-flush" style={{ maxHeight: "200px", overflowY: "auto" }}>
                 {ppts.map((ppt, idx) => (
@@ -177,11 +277,26 @@ export default function SessionPptPage() {
           </div>
         )}
 
-        {/* PPT Viewer */}
+        {/* PPT/PDF Viewer */}
         <div className="mt-3">
           {!pptUrl ? (
-            <div className="alert alert-info mb-0">No PPT URL available.</div>
+            <div className="alert alert-info mb-0">No PPT/PDF URL available.</div>
+          ) : isCurrentPdf ? (
+            // PDF Viewer - render as article-style content
+            <div
+              style={{
+                background: "#f8f9fa",
+                borderRadius: "12px",
+                padding: "1rem",
+                minHeight: "400px",
+                overflowY: "auto",
+                maxHeight: "80vh",
+              }}
+            >
+              <PdfArticleViewer pdfUrl={pptUrl} />
+            </div>
           ) : officeEmbedUrl ? (
+            // PPT Viewer - use Office Online viewer
             <iframe
               title="PPT Viewer"
               src={officeEmbedUrl}
@@ -196,7 +311,7 @@ export default function SessionPptPage() {
             />
           ) : (
             <div className="alert alert-warning mb-0">
-              PPT slide viewer needs a <strong>public http(s) URL</strong> (Cloudinary/hosting). 
+              PPT slide viewer needs a <strong>public http(s) URL</strong> (GCS/hosting). 
               Right now your PPT URL doesn't look public, so please use the "Download / Open" button.
             </div>
           )}

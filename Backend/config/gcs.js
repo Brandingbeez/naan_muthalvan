@@ -10,10 +10,19 @@ let bucket = null;
  */
 function initGCS() {
   try {
-    const { GCS_PROJECT_ID, GCS_BUCKET_NAME, GCS_KEY_FILE, GCS_CREDENTIALS } = process.env;
+    const {
+      GCS_PROJECT_ID,
+      GCS_BUCKET_NAME,
+      GCS_KEY_FILE,
+      GCS_CREDENTIALS,
+      GCP_SA_JSON,
+    } = process.env;
 
+    const CREDS_JSON = GCS_CREDENTIALS || GCP_SA_JSON;
     if (!GCS_PROJECT_ID || !GCS_BUCKET_NAME) {
-      console.warn("[GCS] GCS_PROJECT_ID or GCS_BUCKET_NAME not set. GCS uploads will be disabled.");
+      console.warn(
+        "[GCS] GCS_PROJECT_ID or GCS_BUCKET_NAME not set. GCS uploads will be disabled.",
+      );
       return null;
     }
 
@@ -27,22 +36,35 @@ function initGCS() {
       console.log("[GCS] Using key file:", storageConfig.keyFilename);
     }
     // Option 2: Use credentials JSON string from .env
-    else if (GCS_CREDENTIALS) {
+    // Option 2: Use credentials JSON string from env
+    else if (
+      process.env.GCS_CREDENTIALS ||
+      process.env.GCP_SA_JSON ||
+      process.env.GCP_SA_JSON_B64
+    ) {
       try {
-        storageConfig.credentials = JSON.parse(GCS_CREDENTIALS);
-        console.log("[GCS] Using credentials from .env");
+        let raw =
+          process.env.GCS_CREDENTIALS ||
+          process.env.GCP_SA_JSON ||
+          Buffer.from(process.env.GCP_SA_JSON_B64, "base64").toString("utf8");
+
+        storageConfig.credentials = JSON.parse(raw);
+        console.log("[GCS] Using credentials from env (JSON / base64)");
       } catch (err) {
-        console.error("[GCS] Failed to parse GCS_CREDENTIALS JSON:", err.message);
+        console.error("[GCS] Failed to parse credentials:", err.message);
         return null;
       }
     }
+
     // Option 3: Use default credentials (GOOGLE_APPLICATION_CREDENTIALS env var)
     else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       console.log("[GCS] Using GOOGLE_APPLICATION_CREDENTIALS");
     }
     // No credentials found
     else {
-      console.warn("[GCS] No credentials found. Set GCS_KEY_FILE, GCS_CREDENTIALS, or GOOGLE_APPLICATION_CREDENTIALS");
+      console.warn(
+        "[GCS] No credentials found. Set GCS_KEY_FILE, GCS_CREDENTIALS, or GOOGLE_APPLICATION_CREDENTIALS",
+      );
       return null;
     }
 
@@ -61,8 +83,12 @@ function initGCS() {
       })
       .catch((err) => {
         console.warn("[GCS] ⚠️  Connection test failed:", err.message);
-        console.warn("[GCS] ⚠️  This might be a permission issue. Make sure your service account has 'Storage Admin' role.");
-        console.warn("[GCS] ⚠️  Server will continue, but file uploads may fail.");
+        console.warn(
+          "[GCS] ⚠️  This might be a permission issue. Make sure your service account has 'Storage Admin' role.",
+        );
+        console.warn(
+          "[GCS] ⚠️  Server will continue, but file uploads may fail.",
+        );
       });
 
     return { storage, bucket };
@@ -80,7 +106,7 @@ function getStorage() {
     const initialized = initGCS();
     if (!initialized) {
       throw new Error(
-        "GCS not configured. Please set GCS_PROJECT_ID, GCS_BUCKET_NAME, and credentials in .env file."
+        "GCS not configured. Please set GCS_PROJECT_ID, GCS_BUCKET_NAME, and credentials in .env file.",
       );
     }
   }
@@ -91,8 +117,17 @@ function getStorage() {
  * Generate a file path based on course hierarchy
  * Format: lms/{contentType}/{courseSlug}/{sessionSlug}/{filename}
  */
-function generateFilePath(courseTitle, sessionTitle, contentType = "videos", filename) {
-  const sanitize = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+function generateFilePath(
+  courseTitle,
+  sessionTitle,
+  contentType = "videos",
+  filename,
+) {
+  const sanitize = (str) =>
+    str
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
   const courseSlug = sanitize(courseTitle || "general");
   const sessionSlug = sanitize(sessionTitle || "session");
   return `lms/${contentType}/${courseSlug}/${sessionSlug}/${filename}`;
@@ -108,10 +143,10 @@ function getPublicUrl(filePath) {
   if (!GCS_BUCKET_NAME) {
     throw new Error("GCS_BUCKET_NAME not configured");
   }
-  
+
   // For public buckets
   return `https://storage.googleapis.com/${GCS_BUCKET_NAME}/${filePath}`;
-  
+
   // Alternative: If using custom domain
   // return `https://your-custom-domain.com/${filePath}`;
 }
@@ -124,7 +159,12 @@ function getPublicUrl(filePath) {
  * @param {Object} metadata - Additional metadata
  * @returns {Promise<{url: string, path: string}>}
  */
-async function uploadFile(fileBuffer, destinationPath, contentType, metadata = {}) {
+async function uploadFile(
+  fileBuffer,
+  destinationPath,
+  contentType,
+  metadata = {},
+) {
   const { bucket } = getStorage();
 
   const file = bucket.file(destinationPath);
@@ -173,7 +213,9 @@ async function uploadFile(fileBuffer, destinationPath, contentType, metadata = {
         console.error("[GCS] Error making file public:", err);
         // Still return URL even if makePublic fails
         const url = getPublicUrl(destinationPath);
-        console.warn("[GCS] File might not be publicly accessible. Make sure bucket has public access enabled.");
+        console.warn(
+          "[GCS] File might not be publicly accessible. Make sure bucket has public access enabled.",
+        );
         resolve({
           url,
           path: destinationPath,

@@ -1,5 +1,5 @@
 /**
- * Script to apply CORS configuration to GCS bucket
+ * Script to apply CORS configuration to a GCS bucket
  * Run: node scripts/applyCors.js
  */
 
@@ -8,29 +8,62 @@ const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
 
+function getCredentialsJsonFromEnv() {
+  const raw =
+    process.env.GCS_CREDENTIALS ||
+    process.env.GCP_SA_JSON ||
+    (process.env.GCP_SA_JSON_B64
+      ? Buffer.from(process.env.GCP_SA_JSON_B64, "base64").toString("utf8")
+      : null);
+
+  return raw;
+}
+
 async function applyCors() {
   try {
     const { GCS_PROJECT_ID, GCS_BUCKET_NAME, GCS_KEY_FILE } = process.env;
 
     if (!GCS_PROJECT_ID || !GCS_BUCKET_NAME) {
-      console.error("❌ Error: GCS_PROJECT_ID and GCS_BUCKET_NAME must be set in .env");
+      console.error("❌ Error: GCS_PROJECT_ID and GCS_BUCKET_NAME must be set in env/.env");
       process.exit(1);
     }
 
-    // Initialize GCS
-    let storageConfig = {
-      projectId: GCS_PROJECT_ID,
-    };
+    // Initialize GCS config
+    const storageConfig = { projectId: GCS_PROJECT_ID };
 
+    // Priority:
+    // 1) Key file path (local dev / VM)
+    // 2) JSON creds via env (Fly secret)
+    // 3) GOOGLE_APPLICATION_CREDENTIALS (default ADC)
     if (GCS_KEY_FILE) {
       storageConfig.keyFilename = path.resolve(GCS_KEY_FILE);
-    } else if (process.env.GCS_CREDENTIALS) {
-      storageConfig.credentials = JSON.parse(process.env.GCS_CREDENTIALS);
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      // Use default
+      console.log("[GCS] Using key file:", storageConfig.keyFilename);
     } else {
-      console.error("❌ Error: No GCS credentials found. Set GCS_KEY_FILE, GCS_CREDENTIALS, or GOOGLE_APPLICATION_CREDENTIALS");
-      process.exit(1);
+      const credsJson = getCredentialsJsonFromEnv();
+
+      if (credsJson) {
+        try {
+          storageConfig.credentials = JSON.parse(credsJson);
+          console.log("[GCS] Using credentials from env (GCS_CREDENTIALS/GCP_SA_JSON/GCP_SA_JSON_B64)");
+        } catch (err) {
+          console.error("❌ Error: Failed to parse credentials JSON from env:", err.message);
+          process.exit(1);
+        }
+      } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        console.log("[GCS] Using GOOGLE_APPLICATION_CREDENTIALS (Application Default Credentials)");
+        // No change needed; google lib will pick it up
+      } else {
+        console.error(
+          "❌ Error: No GCS credentials found.\n" +
+            "Set one of:\n" +
+            " - GCS_KEY_FILE (path to JSON key)\n" +
+            " - GCS_CREDENTIALS (full JSON string)\n" +
+            " - GCP_SA_JSON (full JSON string)\n" +
+            " - GCP_SA_JSON_B64 (base64 of JSON)\n" +
+            " - GOOGLE_APPLICATION_CREDENTIALS (ADC path)"
+        );
+        process.exit(1);
+      }
     }
 
     const storage = new Storage(storageConfig);
@@ -53,14 +86,13 @@ async function applyCors() {
 
     console.log("✅ CORS configuration applied successfully!");
     console.log("\n📝 Next steps:");
-    console.log("1. Make sure your bucket has public access enabled");
-    console.log("2. Test video playback in your frontend");
-    console.log("3. Check browser console for any CORS errors");
-
+    console.log("1. If you need PUBLIC access, ensure bucket/IAM allows it (or use Signed URLs).");
+    console.log("2. Test video playback in your frontend.");
+    console.log("3. If you see CORS issues, re-check allowed origins/methods/headers in gcs-cors.json.");
   } catch (err) {
     console.error("❌ Error applying CORS:", err.message);
     if (err.code === 403) {
-      console.error("\n💡 Tip: Make sure your service account has 'Storage Admin' role");
+      console.error("\n💡 Tip: Make sure your service account has 'Storage Admin' (or storage.buckets.update) permission.");
     }
     process.exit(1);
   }

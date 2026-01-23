@@ -18,7 +18,6 @@ public/ppts/
 public/videos/
 
 # Google Cloud Storage key files (NEVER commit these!)
-*.json
 !package.json
 !package-lock.json
 gcs-key.json

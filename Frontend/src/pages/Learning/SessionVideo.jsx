@@ -30,7 +30,7 @@ export default function SessionVideoPage() {
         const { data } = await api.get(`/sessions/${sessionId}`);
         if (!mounted) return;
         setSession(data);
-        
+
         // Debug: Log what we received
         console.log("[SessionVideo] Session data received:", {
           sessionId: data._id,
@@ -40,19 +40,23 @@ export default function SessionVideoPage() {
           legacyVideoUrl: data.videoUrl,
           firstVideoUrl: data.videos?.[0]?.videoUrl,
         });
-        
+
         // If session has videos array, use it; otherwise fall back to legacy videoUrl
-        const videos = data.videos && data.videos.length > 0 
-          ? data.videos 
-          : (data.videoUrl ? [{ videoUrl: data.videoUrl, title: data.title || "Video" }] : []);
-        
+        const videos =
+          data.videos && data.videos.length > 0
+            ? data.videos
+            : data.videoUrl
+              ? [{ videoUrl: data.videoUrl, title: data.title || "Video" }]
+              : [];
+
         console.log("[SessionVideo] Processed videos:", videos);
-        
+
         if (videos.length === 0) {
           setError("No videos available for this session");
         }
       } catch (err) {
-        if (mounted) setError(err?.response?.data?.message || "Failed to load video");
+        if (mounted)
+          setError(err?.response?.data?.message || "Failed to load video");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -62,11 +66,18 @@ export default function SessionVideoPage() {
     };
   }, [sessionId]);
 
-  const videos = session?.videos && session.videos.length > 0
-    ? session.videos.sort((a, b) => (a.order || 0) - (b.order || 0))
-    : session?.videoUrl
-    ? [{ videoUrl: session.videoUrl, title: session.title || "Video", order: 0 }]
-    : [];
+  const videos =
+    session?.videos && session.videos.length > 0
+      ? session.videos.sort((a, b) => (a.order || 0) - (b.order || 0))
+      : session?.videoUrl
+        ? [
+            {
+              videoUrl: session.videoUrl,
+              title: session.title || "Video",
+              order: 0,
+            },
+          ]
+        : [];
 
   const currentVideo = videos[currentVideoIndex];
 
@@ -79,20 +90,34 @@ export default function SessionVideoPage() {
         hasUrl: !!currentVideo.videoUrl,
         urlType: currentVideo.videoUrl?.startsWith("http") ? "HTTP" : "Invalid",
       });
-      
+
       // Test if URL is accessible
       fetch(currentVideo.videoUrl, { method: "HEAD" })
         .then((response) => {
           if (response.ok) {
-            console.log("[SessionVideo] ✅ Video URL is accessible (HTTP", response.status, ")");
+            console.log(
+              "[SessionVideo] ✅ Video URL is accessible (HTTP",
+              response.status,
+              ")",
+            );
           } else {
-            console.warn("[SessionVideo] ⚠️ Video URL returned status:", response.status);
-            setPlayerError(`Video URL returned HTTP ${response.status}. File may not be publicly accessible.`);
+            console.warn(
+              "[SessionVideo] ⚠️ Video URL returned status:",
+              response.status,
+            );
+            setPlayerError(
+              `Video URL returned HTTP ${response.status}. File may not be publicly accessible.`,
+            );
           }
         })
         .catch((err) => {
-          console.error("[SessionVideo] ❌ Video URL test failed:", err.message);
-          setPlayerError(`Cannot access video URL: ${err.message}. Check CORS configuration on GCS bucket.`);
+          console.error(
+            "[SessionVideo] ❌ Video URL test failed:",
+            err.message,
+          );
+          setPlayerError(
+            `Cannot access video URL: ${err.message}. Check CORS configuration on GCS bucket.`,
+          );
         });
     }
   }, [currentVideo]);
@@ -124,7 +149,7 @@ export default function SessionVideoPage() {
   async function goFullscreen() {
     const el = playerRef.current?.getInternalPlayer?.() || playerRef.current;
     if (!el) return;
-    
+
     if (document.fullscreenElement) {
       await document.exitFullscreen();
     } else {
@@ -152,7 +177,9 @@ export default function SessionVideoPage() {
     return (
       <div className="container app-shell">
         <div className="content-area">
-          <div className="alert alert-warning">{error || "No videos available for this session"}</div>
+          <div className="alert alert-warning">
+            {error || "No videos available for this session"}
+          </div>
           <Link className="btn btn-outline-primary" to={`/learn/${sessionId}`}>
             Back to Session
           </Link>
@@ -164,9 +191,15 @@ export default function SessionVideoPage() {
   const breadcrumbItems = [{ label: "Academy", path: "/courses" }];
   if (session?.sectionId?.courseId) {
     const course = session.sectionId.courseId;
-    breadcrumbItems.push({ label: course.title, path: `/courses/${course._id}` });
+    breadcrumbItems.push({
+      label: course.title,
+      path: `/courses/${course._id}`,
+    });
   }
-  breadcrumbItems.push({ label: session?.title || "Session", path: `/learn/${sessionId}` });
+  breadcrumbItems.push({
+    label: session?.title || "Session",
+    path: `/learn/${sessionId}`,
+  });
   breadcrumbItems.push({ label: "Videos", path: "" });
 
   return (
@@ -179,11 +212,17 @@ export default function SessionVideoPage() {
             {session?.title} - Video {currentVideoIndex + 1} of {videos.length}
           </h2>
           <div className="d-flex gap-2">
-            <Link className="btn btn-outline-primary" to={`/learn/${sessionId}`}>
+            <Link
+              className="btn btn-outline-primary"
+              to={`/learn/${sessionId}`}
+            >
               Back
             </Link>
             {videos.length > 1 && (
-              <button className="btn btn-outline-primary" onClick={() => setTheater((t) => !t)}>
+              <button
+                className="btn btn-outline-primary"
+                onClick={() => setTheater((t) => !t)}
+              >
                 {theater ? "Hide Playlist" : "Show Playlist"}
               </button>
             )}
@@ -210,52 +249,56 @@ export default function SessionVideoPage() {
                 <div>
                   {!useNativePlayer ? (
                     /* Try ReactPlayer first */
-                    <ReactPlayer
-                      url={currentVideo.videoUrl}
-                      width="100%"
-                      height="70vh"
-                      controls
-                      playing={false}
-                      onEnded={handleVideoEnd}
-                      onProgress={handleProgress}
-                      onDuration={handleDuration}
-                      onError={(err) => {
-                        console.error("[SessionVideo] ReactPlayer error:", err);
-                        const errorMsg = err?.message || err?.toString() || "Unknown error";
-                        setPlayerError(`ReactPlayer failed: ${errorMsg}. Switching to native player...`);
-                        // Switch to native player after 2 seconds
-                        setTimeout(() => {
-                          setUseNativePlayer(true);
-                        }, 2000);
-                      }}
-                      onReady={() => {
-                        console.log("[SessionVideo] ReactPlayer ready");
-                        setPlayerError("");
-                      }}
-                      onStart={() => {
-                        console.log("[SessionVideo] Video started");
-                        setPlayerError("");
-                      }}
-                      config={{
-                        file: {
-                          attributes: {
-                            controlsList: "nodownload",
-                            crossOrigin: "anonymous",
-                            preload: "auto",
-                          },
-                          forceVideo: true,
-                          forceHLS: false,
-                          forceDASH: false,
-                        },
-                      }}
-                    />
-                  ) : (
-                    /* Fallback: Native HTML5 video player */
+                    // <ReactPlayer
+                    //   url={currentVideo.videoUrl}
+                    //   width="100%"
+                    //   height="70vh"
+                    //   controls
+                    //   playing={false}
+                    //   onEnded={handleVideoEnd}
+                    //   onProgress={handleProgress}
+                    //   onDuration={handleDuration}
+                    //   onError={(err) => {
+                    //     console.error("[SessionVideo] ReactPlayer error:", err);
+                    //     const errorMsg =
+                    //       err?.message || err?.toString() || "Unknown error";
+                    //     setPlayerError(
+                    //       `ReactPlayer failed: ${errorMsg}. Switching to native player...`,
+                    //     );
+                    //     // Switch to native player after 2 seconds
+                    //     setTimeout(() => {
+                    //       setUseNativePlayer(true);
+                    //     }, 2000);
+                    //   }}
+                    //   onReady={() => {
+                    //     console.log("[SessionVideo] ReactPlayer ready");
+                    //     setPlayerError("");
+                    //   }}
+                    //   onStart={() => {
+                    //     console.log("[SessionVideo] Video started");
+                    //     setPlayerError("");
+                    //   }}
+                    //   config={{
+                    //     file: {
+                    //       attributes: {
+                    //         controlsList: "nodownload",
+                    //         crossOrigin: "anonymous",
+                    //         preload: "auto",
+                    //       },
+                    //       forceVideo: true,
+                    //       forceHLS: false,
+                    //       forceDASH: false,
+                    //     },
+                    //   }}
+                    // />
                     <video
-                      src={currentVideo.videoUrl}
+                      key={currentVideo.videoUrl} // ✅ forces reload when URL changes
                       controls
+                      preload="metadata" // ✅ ensures duration loads (fixes 0:00/0:00)
+                      crossOrigin="anonymous" // ✅ needed for cross-origin GCS playback
+                      playsInline // ✅ better mobile behavior
                       width="100%"
-                      style={{ 
+                      style={{
                         height: "70vh",
                         backgroundColor: "#000",
                         borderRadius: "12px",
@@ -267,7 +310,9 @@ export default function SessionVideoPage() {
                       }}
                       onLoadedMetadata={(e) => {
                         setVideoDuration(e.target.duration);
-                        console.log("[SessionVideo] Native video metadata loaded");
+                        console.log(
+                          "[SessionVideo] Native video metadata loaded",
+                        );
                       }}
                       onError={(e) => {
                         console.error("[SessionVideo] Native video error:", e);
@@ -280,29 +325,102 @@ export default function SessionVideoPage() {
                               errorMsg = "Video playback aborted";
                               break;
                             case error.MEDIA_ERR_NETWORK:
-                              errorMsg = "Network error. Check CORS configuration on GCS bucket.";
+                              errorMsg =
+                                "Network error. Check CORS configuration on GCS bucket.";
                               break;
                             case error.MEDIA_ERR_DECODE:
                               errorMsg = "Video decode error";
                               break;
                             case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                              errorMsg = "Video format not supported or URL not accessible";
+                              errorMsg =
+                                "Video format not supported or URL not accessible";
                               break;
                             default:
                               errorMsg = `Error code: ${error.code}`;
                           }
                         }
-                        setPlayerError(`Native player failed: ${errorMsg}. Video may not be publicly accessible or CORS not configured.`);
+                        setPlayerError(
+                          `Native player failed: ${errorMsg}. Video may not be publicly accessible or CORS not configured.`,
+                        );
                       }}
                       onLoadedData={() => {
-                        console.log("[SessionVideo] Native video data loaded successfully");
+                        console.log(
+                          "[SessionVideo] Native video data loaded successfully",
+                        );
                         setPlayerError("");
                       }}
                     >
+                      {/* ✅ Use <source> with type so browser detects mp4 correctly */}
+                      <source src={currentVideo.videoUrl} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    /* Fallback: Native HTML5 video player */
+                    <video
+                      key={currentVideo.videoUrl} // ✅ forces reload when URL changes
+                      controls
+                      preload="metadata" // ✅ ensures duration loads (fixes 0:00/0:00)
+                      crossOrigin="anonymous" // ✅ needed for cross-origin GCS playback
+                      playsInline // ✅ better mobile behavior
+                      width="100%"
+                      style={{
+                        height: "70vh",
+                        backgroundColor: "#000",
+                        borderRadius: "12px",
+                      }}
+                      onEnded={handleVideoEnd}
+                      onTimeUpdate={(e) => {
+                        setPlayedSeconds(e.target.currentTime);
+                        setVideoDuration(e.target.duration);
+                      }}
+                      onLoadedMetadata={(e) => {
+                        setVideoDuration(e.target.duration);
+                        console.log(
+                          "[SessionVideo] Native video metadata loaded",
+                        );
+                      }}
+                      onError={(e) => {
+                        console.error("[SessionVideo] Native video error:", e);
+                        const videoEl = e.target;
+                        const error = videoEl.error;
+                        let errorMsg = "Unknown error";
+                        if (error) {
+                          switch (error.code) {
+                            case error.MEDIA_ERR_ABORTED:
+                              errorMsg = "Video playback aborted";
+                              break;
+                            case error.MEDIA_ERR_NETWORK:
+                              errorMsg =
+                                "Network error. Check CORS configuration on GCS bucket.";
+                              break;
+                            case error.MEDIA_ERR_DECODE:
+                              errorMsg = "Video decode error";
+                              break;
+                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                              errorMsg =
+                                "Video format not supported or URL not accessible";
+                              break;
+                            default:
+                              errorMsg = `Error code: ${error.code}`;
+                          }
+                        }
+                        setPlayerError(
+                          `Native player failed: ${errorMsg}. Video may not be publicly accessible or CORS not configured.`,
+                        );
+                      }}
+                      onLoadedData={() => {
+                        console.log(
+                          "[SessionVideo] Native video data loaded successfully",
+                        );
+                        setPlayerError("");
+                      }}
+                    >
+                      {/* ✅ Use <source> with type so browser detects mp4 correctly */}
+                      <source src={currentVideo.videoUrl} type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   )}
-                  
+
                   {/* Error message and actions */}
                   {playerError && (
                     <div className="alert alert-warning mt-2 small">
@@ -315,19 +433,28 @@ export default function SessionVideoPage() {
                       <div className="mt-2">
                         <strong>Quick Fix:</strong>
                         <ol className="mb-0 small">
-                          <li>Click "Open video in new tab" below to test if URL works</li>
-                          <li>If it works in new tab but not here → CORS issue (configure CORS on GCS bucket)</li>
-                          <li>If it doesn't work in new tab → File not publicly accessible (check GCS permissions)</li>
+                          <li>
+                            Click "Open video in new tab" below to test if URL
+                            works
+                          </li>
+                          <li>
+                            If it works in new tab but not here → CORS issue
+                            (configure CORS on GCS bucket)
+                          </li>
+                          <li>
+                            If it doesn't work in new tab → File not publicly
+                            accessible (check GCS permissions)
+                          </li>
                         </ol>
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Direct video link */}
                   <div className="mt-2 text-center">
-                    <a 
-                      href={currentVideo.videoUrl} 
-                      target="_blank" 
+                    <a
+                      href={currentVideo.videoUrl}
+                      target="_blank"
                       rel="noreferrer"
                       className="btn btn-sm btn-outline-secondary"
                     >
@@ -347,14 +474,26 @@ export default function SessionVideoPage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-white p-4 d-flex align-items-center justify-content-center" style={{ minHeight: "400px" }}>
+                <div
+                  className="text-white p-4 d-flex align-items-center justify-content-center"
+                  style={{ minHeight: "400px" }}
+                >
                   <div className="text-center">
                     <p>No video URL available.</p>
-                    <p className="small text-muted">Video URL: {currentVideo?.videoUrl || "Not set"}</p>
+                    <p className="small text-muted">
+                      Video URL: {currentVideo?.videoUrl || "Not set"}
+                    </p>
                     {currentVideo && (
                       <div className="mt-3">
                         <p className="small">Debug info:</p>
-                        <pre className="small text-start" style={{ fontSize: "0.7rem", maxWidth: "500px", margin: "0 auto" }}>
+                        <pre
+                          className="small text-start"
+                          style={{
+                            fontSize: "0.7rem",
+                            maxWidth: "500px",
+                            margin: "0 auto",
+                          }}
+                        >
                           {JSON.stringify(currentVideo, null, 2)}
                         </pre>
                       </div>
@@ -369,14 +508,20 @@ export default function SessionVideoPage() {
               <h4>{currentVideo?.title || `Video ${currentVideoIndex + 1}`}</h4>
               <div className="text-muted small">
                 {formatTime(playedSeconds)} / {formatTime(videoDuration)}
-                {currentVideo?.duration && ` • Duration: ${currentVideo.duration}`}
+                {currentVideo?.duration &&
+                  ` • Duration: ${currentVideo.duration}`}
               </div>
               {playerError && (
                 <div className="alert alert-warning mt-2 small">
                   {playerError}
                   <div className="mt-2">
-                    <strong>Video URL:</strong> 
-                    <a href={currentVideo?.videoUrl} target="_blank" rel="noreferrer" className="ms-2">
+                    <strong>Video URL:</strong>
+                    <a
+                      href={currentVideo?.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ms-2"
+                    >
                       {currentVideo?.videoUrl}
                     </a>
                   </div>
@@ -401,7 +546,10 @@ export default function SessionVideoPage() {
                 <div className="card-header bg-primary text-white">
                   <h5 className="mb-0">Video Playlist ({videos.length})</h5>
                 </div>
-                <div className="list-group list-group-flush" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                <div
+                  className="list-group list-group-flush"
+                  style={{ maxHeight: "70vh", overflowY: "auto" }}
+                >
                   {videos.map((video, idx) => (
                     <button
                       key={idx}
@@ -426,9 +574,14 @@ export default function SessionVideoPage() {
                           )}
                         </div>
                         <div className="flex-grow-1">
-                          <div className="fw-bold small">{video.title || `Video ${idx + 1}`}</div>
+                          <div className="fw-bold small">
+                            {video.title || `Video ${idx + 1}`}
+                          </div>
                           {video.duration && (
-                            <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                            <div
+                              className="text-muted"
+                              style={{ fontSize: "0.75rem" }}
+                            >
                               {video.duration}
                             </div>
                           )}

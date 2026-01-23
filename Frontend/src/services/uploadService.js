@@ -107,13 +107,17 @@ export async function uploadMultipleToCloudinary(files, options = {}) {
   } = options;
 
   // Determine endpoint based on resource type
+  // Check contentType first (more specific), then resourceType
   let endpoint = "/uploads/video";
-  if (contentType === "materials" || resourceType === "raw") {
-    endpoint = "/uploads/pdf";
-  } else if (contentType === "ppts") {
+  if (contentType === "ppts") {
     endpoint = "/uploads/ppt";
+  } else if (contentType === "materials") {
+    endpoint = "/uploads/pdf";
   } else if (contentType === "thumbnails") {
     endpoint = "/uploads/thumbnail";
+  } else if (resourceType === "raw" && contentType !== "ppts") {
+    // Only use raw for materials, not PPTs
+    endpoint = "/uploads/pdf";
   }
 
   const results = [];

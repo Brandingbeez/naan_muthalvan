@@ -207,10 +207,85 @@ export default function SessionVideoPage() {
       <Breadcrumb items={breadcrumbItems} />
 
       <div className="content-area">
+        <h2 className="page-title mb-3">{session?.title}</h2>
+
+        {/* Tabs Navigation - Matching Second Image */}
+        <ul className="nav nav-tabs mb-4" role="tablist">
+          <li className="nav-item" role="presentation">
+            <button
+              className={`nav-link active d-flex align-items-center gap-2`}
+              type="button"
+            >
+              <span>🎥</span>
+              <span>Videos</span>
+              {videos.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{videos.length}</span>
+              )}
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/ppt/0`}
+            >
+              <span>📊</span>
+              <span>PPTs</span>
+              {session?.ppts?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.ppts.length}</span>
+              )}
+            </Link>
+          </li>
+          <li className="nav-item" role="presentation">
+            <Link
+              className="nav-link d-flex align-items-center gap-2"
+              to={`/learn/${sessionId}/material/0`}
+            >
+              <span>📄</span>
+              <span>Study Materials</span>
+              {session?.materials?.length > 0 && (
+                <span className="badge bg-secondary rounded-pill">{session.materials.length}</span>
+              )}
+            </Link>
+          </li>
+        </ul>
+
+        {/* Videos List - Card Layout */}
+        {/* <div className="row g-3 mb-4">
+          {videos.map((video, idx) => (
+            <div key={idx} className="col-12">
+              <div className={`card ${idx === currentVideoIndex ? "border-primary" : ""}`}>
+                <div className="card-body">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="card-title mb-1">
+                        {video.title || `Video ${idx + 1}`}
+                      </h5>
+                      {video.duration && (
+                        <p className="text-muted small mb-0">Duration: {video.duration}</p>
+                      )}
+                    </div>
+                    <button
+                      className={`btn ${idx === currentVideoIndex ? "btn-primary" : "btn-outline-primary"}`}
+                      onClick={() => {
+                        setCurrentVideoIndex(idx);
+                        setPlayerError("");
+                        setUseNativePlayer(false);
+                      }}
+                    >
+                      {idx === currentVideoIndex ? "▶ Playing" : `Watch Video ${idx + 1}`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div> */}
+
+        {/* Video Player Section */}
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-          <h2 className="page-title mb-0">
-            {session?.title} - Video {currentVideoIndex + 1} of {videos.length}
-          </h2>
+          <h4 className="mb-0">
+            Video {currentVideoIndex + 1} of {videos.length}
+          </h4>
           <div className="d-flex gap-2">
             <Link
               className="btn btn-outline-primary"
@@ -218,14 +293,6 @@ export default function SessionVideoPage() {
             >
               Back
             </Link>
-            {videos.length > 1 && (
-              <button
-                className="btn btn-outline-primary"
-                onClick={() => setTheater((t) => !t)}
-              >
-                {theater ? "Hide Playlist" : "Show Playlist"}
-              </button>
-            )}
             <button className="btn btn-primary" onClick={goFullscreen}>
               Full screen
             </button>

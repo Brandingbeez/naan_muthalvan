@@ -1,93 +1,90 @@
 const multer = require("multer");
-const { uploadFile, generateFilePath } = require("./gcs");
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+const { uploadFileFromPath, generateFilePath } = require("./gcs");
 
-// Memory storage - files will be stored in memory as Buffer
-const memoryStorage = multer.memoryStorage();
+// Use /tmp on Linux (Fly), temp dir on Windows/local
+const TMP_DIR = process.env.TMPDIR || path.join(os.tmpdir(), "lms_uploads");
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
+
+// Disk storage (NOT memory)
+const diskStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, TMP_DIR),
+  filename: (req, file, cb) => {
+    const uniqueId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const sanitizedName = (file.originalname || "file")
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9._-]/g, "");
+    cb(null, `${uniqueId}-${sanitizedName}`);
+  },
+});
 
 /**
- * Create a multer uploader middleware for GCS
- * @param {Object} options - Upload options
- * @param {string} options.folder - Folder name (thumbnails, videos, materials, ppts)
- * @param {string[]} options.allowedMimes - Allowed MIME types
- * @param {string[]} options.allowedExts - Allowed file extensions (fallback)
- * @param {number} options.maxSizeMb - Maximum file size in MB
+ * Create a multer uploader middleware for GCS (disk -> stream to GCS)
  */
 function makeUploader({ folder, allowedMimes, allowedExts, maxSizeMb }) {
-  const maxSize = (maxSizeMb || 50) * 1024 * 1024; // Convert MB to bytes
+  const maxSize = (maxSizeMb || 50) * 1024 * 1024;
 
   const uploader = multer({
-    storage: memoryStorage, // Store in memory, then upload to GCS
+    storage: diskStorage,
     limits: { fileSize: maxSize },
     fileFilter: (req, file, cb) => {
-      console.log(`[Upload] File received: ${file.originalname}, type: ${file.mimetype}, size: ${file.size}`);
-      
       const mimeOk = !allowedMimes || allowedMimes.includes(file.mimetype);
-      
-      if (!mimeOk) {
-        // Windows browsers sometimes send application/octet-stream for various file types
-        // Allow by extension as a fallback when configured
-        const name = (file.originalname || "").toLowerCase();
-        const ext = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "";
-        const extOk = Array.isArray(allowedExts) && allowedExts.includes(ext);
-        
-        if (!extOk) {
-          return cb(
-            new Error(
-              `Invalid file type: ${file.mimetype}. Allowed mimes: ${allowedMimes?.join(", ") || "any"}${
-                allowedExts?.length ? `. Allowed extensions: .${allowedExts.join(", .")}` : ""
-              }`
-            )
-          );
-        }
+
+      // Extension fallback (for octet-stream cases)
+      const name = (file.originalname || "").toLowerCase();
+      const ext = name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "";
+      const extOk = Array.isArray(allowedExts) ? allowedExts.includes(ext) : true;
+
+      if (!mimeOk && !extOk) {
+        return cb(
+          new Error(
+            `Invalid file type: ${file.mimetype}. Allowed mimes: ${allowedMimes?.join(", ") || "any"}${
+              allowedExts?.length ? `. Allowed extensions: .${allowedExts.join(", .")}` : ""
+            }`
+          )
+        );
       }
-      
-      return cb(null, true);
+
+      cb(null, true);
     },
   });
 
   return (req, res, next) => {
-    // Use multer to parse the file into memory
     uploader.single("file")(req, res, async (err) => {
       if (err) {
-        console.error(`[Upload] Multer error:`, err.message);
-        
-        // Handle file size errors
+        console.error("[Upload] Multer error:", err.message);
+
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({
             message: `File too large. Maximum size: ${maxSizeMb}MB`,
           });
         }
-        
         return next(err);
       }
 
-      // If no file, continue (some routes might not require files)
-      if (!req.file) {
-        return next();
-      }
+      if (!req.file) return next();
 
-      // Upload to GCS
       try {
-        // Get course/session info from body (form-data)
+        // Optional: course/session info from form-data
         const courseTitle = req.body.courseTitle;
         const sessionTitle = req.body.sessionTitle;
-        const uniqueId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        const sanitizedName = req.file.originalname.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "");
-        const filename = `${uniqueId}-${sanitizedName}`;
 
-        // Generate file path
+        // Build GCS path
         let filePath;
         if (courseTitle && sessionTitle) {
-          filePath = generateFilePath(courseTitle, sessionTitle, folder, filename);
+          filePath = generateFilePath(courseTitle, sessionTitle, folder, req.file.filename);
         } else {
-          filePath = `lms/${folder}/${filename}`;
+          filePath = `lms/${folder}/${req.file.filename}`;
         }
 
-        console.log(`[Upload] Uploading to GCS: ${filePath}`);
+        console.log("[Upload] Temp file:", req.file.path);
+        console.log("[Upload] Uploading to GCS:", filePath);
 
-        // Upload to GCS
-        const result = await uploadFile(
-          req.file.buffer,
+        // Stream file from disk -> GCS (NO big memory buffer)
+        const result = await uploadFileFromPath(
+          req.file.path,
           filePath,
           req.file.mimetype,
           {
@@ -96,16 +93,23 @@ function makeUploader({ folder, allowedMimes, allowedExts, maxSizeMb }) {
           }
         );
 
-        // Attach GCS result to req.file for compatibility
+        // Cleanup temp file
+        fs.unlink(req.file.path, () => {});
+
+        // Attach result to req.file (compatible with your controller)
         req.file.path = result.url;
         req.file.filename = result.path;
         req.file.publicId = result.publicId;
         req.file.url = result.url;
 
-        console.log(`[Upload] GCS upload successful: ${result.url}`);
+        console.log("[Upload] GCS upload successful:", result.url);
         next();
       } catch (gcsError) {
-        console.error(`[Upload] GCS upload error:`, gcsError.message);
+        console.error("[Upload] GCS upload error:", gcsError.message);
+
+        // Cleanup temp file on error too
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+
         return res.status(500).json({
           message: `Failed to upload file to Google Cloud Storage: ${gcsError.message}`,
         });

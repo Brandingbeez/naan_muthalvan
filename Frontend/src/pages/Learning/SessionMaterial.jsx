@@ -1,16 +1,45 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { FaTrash } from "react-icons/fa";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
 import PdfArticleViewer from "../../components/PdfArticleViewer";
 import { api } from "../../services/api";
+import { deleteSessionContent } from "../../services/lmsService";
+import { useAuth } from "../../state/AuthContext";
 
 export default function SessionMaterialPage() {
   const { sessionId, materialIndex } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentMaterialIndex, setCurrentMaterialIndex] = useState(0);
+
+  async function handleDelete(material, index) {
+    if (!window.confirm("Delete this material?")) return;
+    try {
+      const contentId = material._id || material.publicId || index;
+      await deleteSessionContent(sessionId, "materials", contentId);
+
+      const newMaterials = (session.materials || []).filter((_, i) => i !== index);
+      if (newMaterials.length === 0) {
+        setSession({ ...session, materials: [] });
+        // If no materials left, maybe redirect or just show empty state
+      } else {
+        setSession({ ...session, materials: newMaterials });
+        if (index === currentMaterialIndex) {
+          setCurrentMaterialIndex(0);
+        } else if (index < currentMaterialIndex) {
+          setCurrentMaterialIndex(currentMaterialIndex - 1);
+        }
+      }
+    } catch (err) {
+      alert("Failed to delete material");
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -20,7 +49,7 @@ export default function SessionMaterialPage() {
         const { data } = await api.get(`/sessions/${sessionId}`);
         if (!mounted) return;
         setSession(data);
-        
+
         // Debug: Log what we received
         console.log("[SessionMaterial] Session data received:", {
           sessionId: data._id,
@@ -30,7 +59,7 @@ export default function SessionMaterialPage() {
           legacyMaterialUrl: data.studyMaterialUrl,
           firstMaterialUrl: data.materials?.[0]?.materialUrl,
         });
-        
+
         // Set current material index from URL param or default to 0
         const index = materialIndex ? parseInt(materialIndex, 10) : 0;
         setCurrentMaterialIndex(isNaN(index) ? 0 : index);
@@ -49,8 +78,8 @@ export default function SessionMaterialPage() {
   const materials = session?.materials && session.materials.length > 0
     ? session.materials.sort((a, b) => (a.order || 0) - (b.order || 0))
     : session?.studyMaterialUrl
-    ? [{ materialUrl: session.studyMaterialUrl, title: session.title || "Study Material", order: 0 }]
-    : [];
+      ? [{ materialUrl: session.studyMaterialUrl, title: session.title || "Study Material", order: 0 }]
+      : [];
 
   const currentMaterial = materials[currentMaterialIndex];
   const pdfUrl = currentMaterial?.materialUrl || "";
@@ -190,6 +219,14 @@ export default function SessionMaterialPage() {
                 Open PDF in new tab
               </a>
             )}
+            {isAdmin && (
+              <button
+                className="btn btn-outline-danger d-flex align-items-center gap-2"
+                onClick={() => handleDelete(currentMaterial, currentMaterialIndex)}
+              >
+                <FaTrash size={14} /> Delete
+              </button>
+            )}
           </div>
         </div>
 
@@ -225,17 +262,30 @@ export default function SessionMaterialPage() {
               </div>
               <div className="list-group list-group-flush" style={{ maxHeight: "200px", overflowY: "auto" }}>
                 {materials.map((material, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`list-group-item list-group-item-action ${
-                      idx === currentMaterialIndex ? "active" : ""
-                    }`}
-                    onClick={() => setCurrentMaterialIndex(idx)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {material.title || `Material ${idx + 1}`}
-                  </button>
+                  <div key={idx} className="d-flex align-items-center w-100">
+                    <button
+                      type="button"
+                      className={`list-group-item list-group-item-action ${idx === currentMaterialIndex ? "active" : ""
+                        }`}
+                      onClick={() => setCurrentMaterialIndex(idx)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {material.title || `Material ${idx + 1}`}
+                    </button>
+                    {isAdmin && (
+                      <button
+                        className="btn btn-sm btn-outline-danger ms-2"
+                        style={{ zIndex: 10 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(material, idx);
+                        }}
+                        title="Delete Material"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

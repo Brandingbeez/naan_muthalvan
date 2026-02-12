@@ -6,6 +6,8 @@ const {
   listBySection,
   getSessionById,
   addContentToSession,
+  deleteSession,
+  deleteSessionContent
 } = require("../controllers/sessionController");
 
 const router = express.Router();
@@ -30,6 +32,9 @@ router.post(
 
 // Add content items to existing session (for bulk uploads)
 router.put("/:id/add-content", authRequired, adminOnly, addContentToSession);
+
+router.delete("/:id", authRequired, adminOnly, deleteSession);
+router.delete("/:id/content/:type/:contentId", authRequired, adminOnly, deleteSessionContent);
 
 module.exports = router;
 

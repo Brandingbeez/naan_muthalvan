@@ -13,6 +13,7 @@ const courseRoutes = require("./routes/courseRoutes");
 const sectionRoutes = require("./routes/sectionRoutes");
 const sessionRoutes = require("./routes/sessionRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const lmsRoutes = require("./routes/lmsRoutes");
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ async function start() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true, limit: "200mb" }));
   app.use(morgan("dev"));
-  
+
   // Increase timeout for file uploads (GCS can take time for large files)
   app.use("/api/uploads", (req, res, next) => {
     req.setTimeout(1800000); // 30 minutes for very large video files (500MB+)
@@ -50,6 +51,7 @@ async function start() {
   app.use("/api/sections", sectionRoutes);
   app.use("/api/sessions", sessionRoutes);
   app.use("/api/uploads", uploadRoutes);
+  app.use("/lms", lmsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactPlayer from "react-player";
+import { FaTrash } from "react-icons/fa";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
 import { api } from "../../services/api";
+import { deleteSessionContent } from "../../services/lmsService";
+import { useAuth } from "../../state/AuthContext";
 
 function isYouTube(url) {
   return /youtube\.com|youtu\.be/i.test(url || "");
@@ -11,6 +14,9 @@ function isYouTube(url) {
 
 export default function SessionVideoPage() {
   const { sessionId } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,6 +27,34 @@ export default function SessionVideoPage() {
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const playerRef = useRef(null);
+
+  async function handleDelete(video, index) {
+    if (!window.confirm("Delete this video?")) return;
+    try {
+      // use publicId if available, else try index (as fallback, though risky)
+      // My backend logic tries index if contentId is numeric.
+      // Here I should pass unique ID if possible. 
+      // The videos have `_id` usually if from mongoose.
+      const contentId = video._id || video.publicId || index;
+      await deleteSessionContent(sessionId, "videos", contentId);
+
+      // Update state
+      const newVideos = videos.filter((_, i) => i !== index);
+      if (newVideos.length === 0) {
+        // No more videos
+        setSession({ ...session, videos: [] });
+      } else {
+        setSession({ ...session, videos: newVideos });
+        if (index === currentVideoIndex) {
+          setCurrentVideoIndex(0);
+        } else if (index < currentVideoIndex) {
+          setCurrentVideoIndex(currentVideoIndex - 1);
+        }
+      }
+    } catch (err) {
+      alert("Failed to delete video");
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -71,12 +105,12 @@ export default function SessionVideoPage() {
       ? session.videos.sort((a, b) => (a.order || 0) - (b.order || 0))
       : session?.videoUrl
         ? [
-            {
-              videoUrl: session.videoUrl,
-              title: session.title || "Video",
-              order: 0,
-            },
-          ]
+          {
+            videoUrl: session.videoUrl,
+            title: session.title || "Video",
+            order: 0,
+          },
+        ]
         : [];
 
   const currentVideo = videos[currentVideoIndex];
@@ -577,6 +611,14 @@ export default function SessionVideoPage() {
                 {formatTime(playedSeconds)} / {formatTime(videoDuration)}
                 {currentVideo?.duration &&
                   ` • Duration: ${currentVideo.duration}`}
+                {isAdmin && (
+                  <button
+                    className="btn btn-sm btn-outline-danger ms-3 d-inline-flex align-items-center gap-2"
+                    onClick={() => handleDelete(currentVideo, currentVideoIndex)}
+                  >
+                    <FaTrash size={14} /> Delete Video
+                  </button>
+                )}
               </div>
               {playerError && (
                 <div className="alert alert-warning mt-2 small">
@@ -621,9 +663,8 @@ export default function SessionVideoPage() {
                     <button
                       key={idx}
                       type="button"
-                      className={`list-group-item list-group-item-action ${
-                        idx === currentVideoIndex ? "active" : ""
-                      }`}
+                      className={`list-group-item list-group-item-action ${idx === currentVideoIndex ? "active" : ""
+                        }`}
                       onClick={() => {
                         setCurrentVideoIndex(idx);
                         setPlayedSeconds(0);
@@ -653,6 +694,18 @@ export default function SessionVideoPage() {
                             </div>
                           )}
                         </div>
+                        {isAdmin && (
+                          <button
+                            className="btn btn-sm text-danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(video, idx);
+                            }}
+                            title="Delete Video"
+                          >
+                            <FaTrash size={14} />
+                          </button>
+                        )}
                       </div>
                     </button>
                   ))}

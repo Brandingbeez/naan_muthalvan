@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { FaTrash } from "react-icons/fa";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
-import { getCourse, listCourses, listSectionsByCourse, listSessionsBySection } from "../../services/lmsService";
+import { getCourse, listCourses, listSectionsByCourse, listSessionsBySection, deleteSection, deleteSession } from "../../services/lmsService";
+import { useAuth } from "../../state/AuthContext";
 
 export default function CourseDetailsPage() {
   const { courseId, subCourseId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const actualCourseId = subCourseId || courseId;
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -20,6 +25,35 @@ export default function CourseDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [error, setError] = useState("");
+
+  async function handleDeleteSection(secId, title) {
+    if (!window.confirm(`Delete section "${title}"? This will delete all sessions inside it.`)) return;
+    try {
+      await deleteSection(secId);
+      const newSections = sections.filter(s => s._id !== secId);
+      setSections(newSections);
+      // If we deleted the active section, select the first one available or clear selection
+      if (secId === selectedSectionId) {
+        if (newSections.length > 0) {
+          setSearchParams({ section: newSections[0]._id });
+        } else {
+          setSearchParams({});
+        }
+      }
+    } catch (err) {
+      alert("Failed to delete section");
+    }
+  }
+
+  async function handleDeleteSession(sessId, title) {
+    if (!window.confirm(`Delete session "${title}"?`)) return;
+    try {
+      await deleteSession(sessId);
+      setSessions(sessions.filter(s => s._id !== sessId));
+    } catch (err) {
+      alert("Failed to delete session");
+    }
+  }
 
   const selectedSection = useMemo(
     () => sections.find((s) => s._id === selectedSectionId) || null,
@@ -149,7 +183,7 @@ export default function CourseDetailsPage() {
   return (
     <div className="container app-shell">
       <Breadcrumb items={breadcrumbItems} />
-      
+
       <div className="content-area">
         <div className="row">
           <aside className="col-12 col-lg-3 border-end" style={{ paddingRight: 20 }}>
@@ -170,14 +204,25 @@ export default function CourseDetailsPage() {
                 {sections.map((s) => {
                   const active = s._id === selectedSectionId;
                   return (
-                    <button
-                      key={s._id}
-                      className={`list-group-item list-group-item-action ${active ? "active" : ""}`}
-                      onClick={() => setSearchParams({ section: s._id })}
-                      style={active ? { backgroundColor: "#667eea", borderColor: "#667eea" } : {}}
-                    >
-                      {s.title}
-                    </button>
+                    <div key={s._id} className="d-flex align-items-center mb-1">
+                      <button
+                        className={`list-group-item list-group-item-action flex-grow-1 text-start ${active ? "active" : ""}`}
+                        onClick={() => setSearchParams({ section: s._id })}
+                        style={active ? { backgroundColor: "#667eea", borderColor: "#667eea" } : {}}
+                      >
+                        {s.title}
+                      </button>
+                      {isAdmin && (
+                        <button
+                          className="btn btn-sm btn-outline-danger ms-1"
+                          onClick={() => handleDeleteSection(s._id, s.title)}
+                          title="Delete Section"
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <FaTrash size={12} />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
                 {sections.length === 0 ? (
@@ -194,9 +239,24 @@ export default function CourseDetailsPage() {
 
             <div className="session-grid">
               {sessions.map((sess) => (
-                <Link key={sess._id} className="session-button" to={`/learn/${sess._id}`}>
-                  {sess.title}
-                </Link>
+                <div key={sess._id} className="position-relative">
+                  <Link className="session-button d-block" to={`/learn/${sess._id}`}>
+                    {sess.title}
+                  </Link>
+                  {isAdmin && (
+                    <button
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                      style={{ zIndex: 10, borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteSession(sess._id, sess.title);
+                      }}
+                      title="Delete Session"
+                    >
+                      <FaTrash size={10} />
+                    </button>
+                  )}
+                </div>
               ))}
               {!loadingSessions && sessions.length === 0 ? (
                 <div className="alert alert-info mb-0">No sessions in this section yet.</div>

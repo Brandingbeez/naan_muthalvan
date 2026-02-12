@@ -1,7 +1,7 @@
 const express = require("express");
 const { body } = require("express-validator");
 const { authRequired, adminOnly } = require("../middleware/auth");
-const { createSection, listByCourse } = require("../controllers/sectionController");
+const { createSection, listByCourse, deleteSection } = require("../controllers/sectionController");
 
 const router = express.Router();
 
@@ -18,6 +18,8 @@ router.post(
   ],
   createSection
 );
+
+router.delete("/:id", authRequired, adminOnly, deleteSection);
 
 module.exports = router;
 

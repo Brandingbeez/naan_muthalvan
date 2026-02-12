@@ -64,9 +64,9 @@ export default function LoginPage() {
         </form>
 
         <hr className="my-4" />
-        <div className="small text-secondary">
+        {/* <div className="small text-secondary">
           New here? <Link to="/register">Create an account</Link>
-        </div>
+        </div> */}
       </div>
     </div>
   );

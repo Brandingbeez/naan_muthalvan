@@ -35,3 +35,25 @@ exports.getCourseById = async (req, res, next) => {
   }
 };
 
+const Section = require("../models/Section");
+const Session = require("../models/Session");
+
+exports.deleteCourse = async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    // Cascade delete sections and sessions
+    const sections = await Section.find({ courseId: course._id });
+    for (const section of sections) {
+      await Session.deleteMany({ sectionId: section._id });
+    }
+    await Section.deleteMany({ courseId: course._id });
+    await course.deleteOne();
+
+    return res.json({ message: "Course deleted successfully" });
+  } catch (err) {
+    return next(err);
+  }
+};
+

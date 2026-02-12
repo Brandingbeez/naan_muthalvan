@@ -28,7 +28,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/courses" replace />} />
 
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* <Route path="/register" element={<RegisterPage />} /> */}
 
           <Route element={<ProtectedRoute />}>
             <Route path="/courses" element={<CourseListPage />} />

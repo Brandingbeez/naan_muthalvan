@@ -1,15 +1,32 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { FaTrash } from "react-icons/fa";
 import Loading from "../../components/Loading";
 import Breadcrumb from "../../components/Breadcrumb";
-import { listCourses, getCourse } from "../../services/lmsService";
+import { listCourses, getCourse, deleteCourse } from "../../services/lmsService";
+import { useAuth } from "../../state/AuthContext";
 
 export default function CourseListPage() {
   const { courseId } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [courses, setCourses] = useState([]);
   const [parentCourse, setParentCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  async function handleDelete(id, title) {
+    if (!window.confirm(`Are you sure you want to delete course "${title}"? This will delete all sections and sessions inside it.`)) {
+      return;
+    }
+    try {
+      await deleteCourse(id);
+      setCourses(courses.filter(c => c._id !== id));
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to delete course");
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -55,7 +72,7 @@ export default function CourseListPage() {
       {parentCourse && <Breadcrumb items={breadcrumbItems} />}
       <div className="content-area">
         <h2 className="page-title">{pageTitle}</h2>
-        
+
         {loading ? <Loading label="Loading..." /> : null}
         {error ? <div className="alert alert-danger">{error}</div> : null}
 
@@ -76,9 +93,24 @@ export default function CourseListPage() {
               );
             }
             return (
-              <Link key={c._id} className="folder-button" to={`/courses/${c._id}`}>
-                {c.title}
-              </Link>
+              <div key={c._id} className="position-relative">
+                <Link className="folder-button d-block" to={`/courses/${c._id}`}>
+                  {c.title}
+                </Link>
+                {isAdmin && (
+                  <button
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                    style={{ zIndex: 10, borderRadius: "50%", width: "30px", height: "30px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete(c._id, c.title);
+                    }}
+                    title="Delete Course"
+                  >
+                    <FaTrash size={14} />
+                  </button>
+                )}
+              </div>
             );
           })}
           {!loading && !error && courses.length === 0 ? (

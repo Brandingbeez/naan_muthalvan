@@ -5,6 +5,7 @@ const {
   createCourse,
   listCourses,
   getCourseById,
+  deleteCourse,
 } = require("../controllers/courseController");
 
 const router = express.Router();
@@ -23,6 +24,8 @@ router.post(
   ],
   createCourse
 );
+
+router.delete("/:id", authRequired, adminOnly, deleteCourse);
 
 module.exports = router;
 

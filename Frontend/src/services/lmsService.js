@@ -40,3 +40,23 @@ export async function addContentToSession(sessionId, payload) {
   const { data } = await api.put(`/sessions/${sessionId}/add-content`, payload);
   return data;
 }
+
+export async function deleteCourse(courseId) {
+  const { data } = await api.delete(`/courses/${courseId}`);
+  return data;
+}
+
+export async function deleteSection(sectionId) {
+  const { data } = await api.delete(`/sections/${sectionId}`);
+  return data;
+}
+
+export async function deleteSession(sessionId) {
+  const { data } = await api.delete(`/sessions/${sessionId}`);
+  return data;
+}
+
+export async function deleteSessionContent(sessionId, type, contentId) {
+  const { data } = await api.delete(`/sessions/${sessionId}/content/${type}/${contentId}`);
+  return data;
+}

@@ -8,6 +8,5 @@ export async function login(payload) {
 export async function register(payload) {
   const { data } = await api.post("/auth/register", payload);
   return data; // { token, user }
-
 }
 

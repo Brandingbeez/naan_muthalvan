@@ -20,7 +20,8 @@ const buildPublishPayload = async (courseCode) => {
 const publishCourseToNm = async (courseCode) => {
   const payload = await buildPublishPayload(courseCode);
   const token = await getValidAccessToken();
-  const response = await axios.post(`${NM_BASE_URL}/courses`, payload, {
+  // const response = await axios.post(`${NM_BASE_URL}/courses`, payload, {
+  const response = await axios.post(`${NM_BASE_URL}/api/v1/lms/client/course/publish/`, payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;

@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f7fa;
+  color: rgba(0, 0, 0, 0.85);
+  line-height: 1.5715;
+}
+
+/* Ant Design customizations */
+.ant-layout {
+  background: transparent;
+}
+
+.ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  border: 0;
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.ant-btn-primary {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-input-number,
+.ant-select {
+  border-radius: 6px;
+}
+
+.ant-modal {
+  border-radius: 8px;
+}
+
+.ant-modal-content {
+  border-radius: 8px;
+}
+
+.ant-input-lg {
+  border-radius: 6px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .ant-layout-header {
+    padding: 0 16px !important;
+    height: 56px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mb-8 {
+  margin-bottom: 32px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mt-8 {
+  margin-top: 32px;
+}
+
+/* No overflow on smallest viewports */
+@media (max-width: 325px) {
+  .ant-card {
+    margin: 0 -4px;
+    padding: 12px !important;
+  }
+
+  .ant-btn {
+    border-radius: 4px;
+    font-size: 12px;
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Focus states for accessibility */
+.ant-btn:focus,
+.ant-input:focus,
+.ant-select:focus {
+  outline: 2px solid rgba(24, 144, 255, 0.2);
+  outline-offset: 2px;
+}
+
+/* Prevent text selection on buttons */
+.ant-btn {
+  user-select: none;
+}
+
+/* Ensure proper image scaling */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ensure modals are properly responsive */
+.ant-modal {
+  max-width: 100%;
+}
+
+.ant-modal-content {
+  max-width: 100%;
+}
+
+/* Ensure tables work well on mobile */
+.ant-table {
+  overflow: auto;
+}
+
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.p-4 {
+  padding: 16px;
+}
+
+.w-full {
+  width: 100%;
+}

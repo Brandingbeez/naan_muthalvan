@@ -1,55 +1,71 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import AppNavbar from "./components/AppNavbar";
-import ProtectedRoute from "./routes/ProtectedRoute";
-import AdminRoute from "./routes/AdminRoute";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ConfigProvider } from 'antd'
+import { AdminAuthContextProvider } from './auth/AdminAuthContext'
+import RequireAdmin from './auth/RequireAdmin'
+import Home from './pages/Public/Home'
+import CenterCourses from './pages/Public/CenterCourses'
+import CourseSubjects from './pages/Public/CourseSubjects'
+import SubjectDetail from './pages/Public/SubjectDetail'
+import SessionDetail from './pages/Public/SessionDetail'
+import Login from './pages/Admin/Login'
+import Dashboard from './pages/Admin/Dashboard'
+import Centers from './pages/Admin/Centers'
+import Courses from './pages/Admin/Courses'
+import Subjects from './pages/Admin/Subjects'
+import Sessions from './pages/Admin/Sessions'
+import Resources from './pages/Admin/Resources'
+import NmPublish from './pages/Admin/NmPublish'
+import AuditLogs from './pages/Admin/AuditLogs'
+import LaunchHandler from './pages/Nm/LaunchHandler'
 
-import LoginPage from "./pages/Auth/Login";
-import RegisterPage from "./pages/Auth/Register";
-import CourseListPage from "./pages/Courses/CourseList";
-import CourseDetailsPage from "./pages/Courses/CourseDetails";
-import SessionLearningPage from "./pages/Learning/SessionLearning";
-import SessionMaterialPage from "./pages/Learning/SessionMaterial";
-import SessionPptPage from "./pages/Learning/SessionPpt";
-import SessionVideoPage from "./pages/Learning/SessionVideo";
-
-import AdminDashboardPage from "./pages/Admin/AdminDashboard";
-import AddCoursePage from "./pages/Admin/AddCourse";
-import AddSectionPage from "./pages/Admin/AddSection";
-import AddSessionPage from "./pages/Admin/AddSession";
-
-import "./App.css";
-
-export default function App() {
-  return (
-    <>
-      <AppNavbar />
-      <main className="app-page">
-        <Routes>
-          <Route path="/" element={<Navigate to="/courses" replace />} />
-
-          <Route path="/login" element={<LoginPage />} />
-          {/* <Route path="/register" element={<RegisterPage />} /> */}
-
-          <Route element={<ProtectedRoute />}>
-            <Route path="/courses" element={<CourseListPage />} />
-            <Route path="/courses/:courseId" element={<CourseDetailsPage />} />
-            <Route path="/courses/:courseId/:subCourseId" element={<CourseDetailsPage />} />
-            <Route path="/learn/:sessionId" element={<SessionLearningPage />} />
-            <Route path="/learn/:sessionId/material/:materialIndex?" element={<SessionMaterialPage />} />
-            <Route path="/learn/:sessionId/ppt/:pptIndex?" element={<SessionPptPage />} />
-            <Route path="/learn/:sessionId/video" element={<SessionVideoPage />} />
-          </Route>
-
-          <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/courses/new" element={<AddCoursePage />} />
-            <Route path="/admin/sections/new" element={<AddSectionPage />} />
-            <Route path="/admin/sessions/new" element={<AddSessionPage />} />
-          </Route>
-
-          <Route path="*" element={<Navigate to="/courses" replace />} />
-        </Routes>
-      </main>
-    </>
-  );
+const themeConfig = {
+  token: {
+    colorPrimary: '#1890ff',
+    colorSuccess: '#52c41a',
+    colorWarning: '#faad14',
+    colorError: '#ff4d4f',
+    colorInfo: '#1890ff',
+    colorTextBase: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 6,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
+    fontSize: 14,
+    lineHeight: 1.5715,
+    lineType: 'solid',
+    boxShadow: '0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05)',
+    boxShadowSecondary: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    controlHeight: 32,
+    controlHeightLg: 40,
+    controlHeightSm: 24,
+  },
+  algorithm: undefined, // Can switch to dark theme with 'darkAlgorithm'
 }
+
+function App() {
+  return (
+    <ConfigProvider theme={themeConfig}>
+      <Router>
+        <AdminAuthContextProvider>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/centers/:centerId" element={<CenterCourses />} />
+            <Route path="/courses/:courseCode" element={<CourseSubjects />} />
+            <Route path="/subjects/:subjectId" element={<SubjectDetail />} />
+            <Route path="/sessions/:sessionId" element={<SessionDetail />} />
+            <Route path="/admin/login" element={<Login />} />
+            <Route path="/admin" element={<RequireAdmin><Dashboard /></RequireAdmin>} />
+            <Route path="/admin/centers" element={<RequireAdmin><Centers /></RequireAdmin>} />
+            <Route path="/admin/courses" element={<RequireAdmin><Courses /></RequireAdmin>} />
+            <Route path="/admin/subjects" element={<RequireAdmin><Subjects /></RequireAdmin>} />
+            <Route path="/admin/sessions" element={<RequireAdmin><Sessions /></RequireAdmin>} />
+            <Route path="/admin/resources" element={<RequireAdmin><Resources /></RequireAdmin>} />
+            <Route path="/admin/nm" element={<RequireAdmin><NmPublish /></RequireAdmin>} />
+            <Route path="/admin/audit" element={<RequireAdmin><AuditLogs /></RequireAdmin>} />
+            <Route path="/nm/launch" element={<LaunchHandler />} />
+          </Routes>
+        </AdminAuthContextProvider>
+      </Router>
+    </ConfigProvider>
+  )
+}
+
+export default App

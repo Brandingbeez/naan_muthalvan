@@ -1,9 +1,9 @@
-export default function Loading({ label = "Loading..." }) {
-  return (
-    <div className="d-flex align-items-center gap-2 text-secondary">
-      <div className="spinner-border spinner-border-sm" role="status" />
-      <span>{label}</span>
-    </div>
-  );
-}
+import { Spin, Flex } from 'antd'
 
+const Loading = ({ size = 'large', tip = 'Loading...' }) => (
+  <Flex justify="center" align="center" style={{ minHeight: '200px' }}>
+    <Spin size={size} tip={tip} />
+  </Flex>
+)
+
+export default Loading
